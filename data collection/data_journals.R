@@ -33,7 +33,7 @@ source("read_wos_custom.r",echo=T)
 wos_data=read.wos(wos)
 wos_data<-wos_data%>%
   rename("author"="AU","editors"="BE","title"="TI","journal"="SO","language_of_original_document"="LA","document_type"="DT","conference_name"="CT","conference_date"="CY","conference_location"="CL","sponsors"="SP","keywords"="DE","index_keywords"="ID","abstract"="AB","author_with_affiliations"="C1","correspondence_address"="EM","author_s_id"="RI","funding_details"="FU","funding_text_1"="FX","references"="CR",
-         "citation_count"="Z9","publisher"="PU","ISSN"="SN","ISBN"="BN","abbreviated_source_title"="J9","year"="PY","volume"="VL","issue"="IS","art_no"="AR","doi"="DI","pubmed_id"="PM","source"="UT","open_access"="OA","page_count"="PG")%>%
+         "citation_count"="Z9","publisher"="PU","ISSN"="SN","ISBN"="BN","abbreviated_source_title"="J9","year"="PY","volume"="VL","issue"="IS","art_no"="AR","doi"="D2","pubmed_id"="PM","source"="UT","open_access"="OA","page_count"="PG")%>%
   unite("pages",c("BP","EP"),sep="-")%>%mutate(year=as.numeric(year),"citation_count"=as.numeric(citation_count),"page_count"=as.numeric(page_count))
 
 ##combine
@@ -49,13 +49,14 @@ doi_match <- find_duplicates(data_all,
 data_unique <- extract_unique_references(data_all,doi_match)
 
 ##clean up
-#check which variable is the unique identifyer and keep that!!!
+#check which variable is the unique identifier and keep that!!!
 rows_to_keep <- c("author","year","title","journal","abstract","keywords","volume","issue","pages","doi","citation_count","document_type","label")
 
 literature <- data_unique %>% select(rows_to_keep)
 
-#remove all entries with empty abstracts (mainly books reviews, editorials and letters; 14 articles --> not worth bothering to manually include those)
+#remove all entries with empty abstracts (mainly books reviews, editorials and letters; 229 articles --> not worth bothering to manually include those)
 literature <- subset(literature,abstract!="")
+literature <- subset(literature,doi!="")
 
 #write out
 save(literature,file="data_for_analysis/literature.RData")

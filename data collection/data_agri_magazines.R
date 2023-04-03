@@ -50,7 +50,6 @@ for (i in 1:length(links_list)){
 colnames(topagrar_texts) <- c("No","Date","Author","Title","Abstract","Main")
 write.csv(topagrar_texts,"topagrar_texts.csv",row.names=F,fileEncoding="UTF-8")
 
-
 ################### AgrarHeute ##################################
 ##### Search for "nachhaltige landwirtschaft" on 28.04.2022 --> 175 entries
 #create empty object to save a list of seearch pages in
@@ -174,7 +173,7 @@ for (i in 1:nrow(df_all_1)){
 }
 
 ##### Extract relevant data from PDFs
-##### Partly adapted from code provided by Mariana Madruga de Brito
+##### Partly adapted from code by Mariana de Brito, originally used for de Brito, M.M., Kuhlicke, C., Marx, A., 2020. Near-real-time drought impact assessment: a text mining approach on the 2018/19 drought in Germany. Environ. Res. Lett. 15, 1040a9. https://doi.org/10.1088/1748-9326/aba4ca
 #load basic article info if necessary
 load(paste0(here(),"/Web scraping/dlgm_info.RData"))
 #rename
@@ -192,7 +191,7 @@ for(i in 1:length(files)){
   text <- imported_text$text
   #extract main text by removing page numbers and headers
   main <- stringr::str_remove_all(string=text,pattern="([:digit:][:digit:]|[:digit:])[ ]+DLG-Mitteilungen ([:digit:]|[:digit:][:digit:])/[:digit:][:digit:][:digit:][:digit:]")
-  main <- stringr::str_remove_all(string=main,pattern="^[ -ï¿½ï¿½ï¿½A-Z]{2,30} (| )?[ -ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½a-zA-Z]{2,40}(\n)+")
+  main <- stringr::str_remove_all(string=main,pattern="^[ -ÄÖÜA-Z]{2,30} (| )?[ -äüöÄÖÜßa-zA-Z]{2,40}(\n)+")
   #remove \n by replacing them by spaces
   main <- stringr::str_replace_all(string=main,pattern="[\n]+",replacement=" ")
   dlgm[i,] <- c(i,filename,main,"DLG-Mitteilungen")
@@ -234,14 +233,14 @@ load("data_for_analysis/dlgm.RData")
 #add unique IDs
 magazines$ID <- c(seq(1:1301),seq(1:172))
 magazines$ID <- paste0(magazines$source,"_",magazines$ID)
-dlgm_full$ID <- paste0(dlgm$source,"_",dlgm$id)
+dlgm_full$ID <- str_remove(dlgm_full$filename,".pdf")
 
 #remove unnecessary columns from dlgm
 dlgm_simple <- dlgm_full[,c(10,3,9,2,7)]
 colnames(dlgm_simple) <- c("ID","Author","Date","Title","Main")
 
 #combine DLG with topagrar and agrarheute
-ag_magazines <- rbind(magazines[,c(6,1,2,3,4)],dlgm_simple)
+ag_magazines <- rbind(magazines[,c(7,1,2,3,4)],dlgm_simple)
 
 #write out
 save(ag_magazines,file="data_for_analysis/ag_magazines.RData")

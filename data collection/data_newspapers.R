@@ -5,11 +5,12 @@
 ####
 # Adapted from code provided by Mariana Madruga de Brito, originally used for de Brito, M.M., Kuhlicke, C., Marx, A., 2020. Near-real-time drought impact assessment: a text mining approach on the 2018/19 drought in Germany. Environ. Res. Lett. 15, 1040a9. https://doi.org/10.1088/1748-9326/aba4ca
 ####
-list.of.packages <- c("readr","textreadr","pdfsearch","findR","pdftools","textreuse")
+#check installed packages
+list.of.packages <- c("here","dplyr","tidyverse","readr","textreadr","pdfsearch","findR","pdftools","textreuse")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
-#load
+#load packages
 require(here)
 require(dplyr)
 require(pdfsearch)
@@ -62,7 +63,9 @@ for (i in 1:length(files)){
   #replace line breaks \n by spaces
   texts <- stringr::str_replace_all(string=texts,pattern="(\n)+",replacement=" ")
   #remove link, copyright statement, Genios logo
-  texts <- stringr::str_remove_all(string=texts,pattern="Dauerhafte Adresse des Dokuments: https://www.wiso-net.de/document/[a-zA-Z0123456789_%-]+ Alle Rechte vorbehalten: [ -äüöAÖÜßa-zA-Z0123456789()&.]{10,80}( Alle Rechte vorbehalten: [ -äüöAÖÜßa-zA-Z0123456789()&.]{10,80})?[ ]+© GBI-Genios Deutsche Wirtschaftsdatenbank GmbH")
+  texts <- stringr::str_remove_all(string=texts,pattern="Dauerhafte Adresse des Dokuments: https://www.wiso-net.de/document/[a-zA-Z0123456789_%-]+")
+  texts <- stringr::str_remove_all(string=texts,pattern="Alle Rechte vorbehalten: [ -äüöAÖÜßa-zA-Z0123456789()&.]{10,80}")
+  texts <- stringr::str_remove_all(string=texts,pattern="?GBI-Genios Deutsche Wirtschaftsdatenbank GmbH")
     #remove remainders from the Quelle line
   texts <- stringr::str_remove_all(string=texts,pattern="^[, ]{1,3}(S.|Seite|SEITE|Nr.) ([:digit:][:digit:]|[:digit:]|[A-Z][:digit:]|[A-Z][:digit:][:digit:])")
   #add id's
@@ -148,6 +151,37 @@ newspapers_cleaner$year[1435] <- newspapers_cleaner$year[1434]
 newspapers_cleaner$year[1825] <- newspapers_cleaner$year[1824]
 newspapers_cleaner$year[2095] <- newspapers_cleaner$year[2094]
 newspapers_cleaner$year[3262] <- newspapers_cleaner$year[3263]
+
+##########################################################
+#create subset based on a predefined list of newspapers
+relevant_newspapers <- c("Handelsblatt","SPIEGEL|Spiegel","Stern","Die Zeit|DIE ZEIT|Zeit Online","Focus","Die Welt|DIE WELT|Welt Online","Frankfurter Rundschau","M?rkische Allgemeine","Lausitzer Rundschau","Badische Zeitung","S¨¹dkurier","N¨¹rnberger Nachrichten","Passauer Neue Presse|PASSAUER NEUE PRESSE","G?ttinger Tageblatt","Frankfurter Neue Presse","Schweriner Volkszeitung","Nordkurier","Neue Osnabr¨¹cker Zeitung","Nordwest Zeitung","Rheinische Post","Neue Westf?lische","Rhein-Zeitung","^Allgemeine Zeitung","Schleswig-Holsteinische Landeszeitung","Kieler Nachrichten","Hamburger Abendblatt","Saarbr¨¹cker Zeitung","S?chsische Zeitung","Leipziger Volkszeitung|Leipziger Volkszeitung","Mitteldeutsche Zeitung","Th¨¹ringer Allgemeine|TH¨¹RINGER ALLGEMEINE","Ostth¨¹ringer Zeitung")
+#create subset
+arts_keep <- vector()
+for (i in 1:length(relevant_newspapers)){
+  art_keep <- grep(relevant_newspapers[i],newspapers_cleaner$source)
+  arts_keep <- c(arts_keep,art_keep)
+}
+arts_keep <- sort(arts_keep) #sort
+newspapers <- newspapers_cleaner[arts_keep,]
+
+#remove newspaper names and other unwanted stuff from main text
+to_remove <- unique(newspapers$source) #select unique values
+to_remove <- gsub(" $","",to_remove,perl=T) #remove spaces at end of values
+to_remove <- to_remove[-(grep("Die Zeit$",to_remove))] #exclude "Die Zeit" as it is not only a name of a newspaper
+to_remove <- c(to_remove,c("Potsdamer Zeitung","Dahme-Kurier","Der Havell?nder","Neues Granseer Tageblatt","Neue Oranienburger Zeitung","Westhavell?nder","Brandenburger Kurier","Dosse-Kurier","Fl?ming-Echo","J¨¹terboger Echo","Kyritzer Tageblatt","Luckenwalder Rundschau","Prignitz-Kurier","Ruppiner Tageblatt","Zossener Rundschau","FR-Magazin","Nordwest Zeitung","Ausgabe Sternberg","Ausgabe G¨¹strow","Ausgabe Parchim","Anzeiger f¨¹r Sternberg - Br¨¹el - Warin","Ludwigsluster Tageblatt","Lokales","G¨¹strower Anzeiger","Parchimer Zeitung","B¨¹tzower Zeitung","Anzeiger f¨¹r Sternberg, Br¨¹hl, Warin"))
+for (i in 1:length(to_remove)){
+  newspapers$text <- str_remove_all(pattern=to_remove[i],string=newspapers$text)  
+}
+
+#remove articles that weren't downloaded due to quality issues (with a message that they should be downloaded individually)
+trash <- grep("Hinweis: Fur eine bessere Darstellung des Artikels rufen Sie bitte die Zeitungsseite als PDF ab. Den Artikeltext zeigen wir Ihnen hier nur zur Ubersicht an, da er leider in fehlerhafter Datenqualitat erscheint.",newspapers$text)
+nchar(newspapers$text[trash]) #check whether there are no articles with significantly more text
+newspapers <- newspapers[-trash,]
+#113 entries removed
+
+#replace "nachhaltigelandwirtschaft" by "nachhaltige landwirtschaft"
+newspapers$text <- gsub("nachhaltigeLandwirtschaft|NachhaltigeLandwirtschaft","nachhaltige landwirtschaft",newspapers$text)
+
 
 #write out
 save(newspapers_cleaner,file="data_for_analysis/newspapers_clean.RData")
