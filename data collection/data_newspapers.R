@@ -154,6 +154,7 @@ newspapers_cleaner$year[3262] <- newspapers_cleaner$year[3263]
 
 ##########################################################
 #create subset based on a predefined list of newspapers
+# !!!optional, wasn't applied in the end!!!
 relevant_newspapers <- c("Handelsblatt","SPIEGEL|Spiegel","Stern","Die Zeit|DIE ZEIT|Zeit Online","Focus","Die Welt|DIE WELT|Welt Online","Frankfurter Rundschau","M?rkische Allgemeine","Lausitzer Rundschau","Badische Zeitung","S¨¹dkurier","N¨¹rnberger Nachrichten","Passauer Neue Presse|PASSAUER NEUE PRESSE","G?ttinger Tageblatt","Frankfurter Neue Presse","Schweriner Volkszeitung","Nordkurier","Neue Osnabr¨¹cker Zeitung","Nordwest Zeitung","Rheinische Post","Neue Westf?lische","Rhein-Zeitung","^Allgemeine Zeitung","Schleswig-Holsteinische Landeszeitung","Kieler Nachrichten","Hamburger Abendblatt","Saarbr¨¹cker Zeitung","S?chsische Zeitung","Leipziger Volkszeitung|Leipziger Volkszeitung","Mitteldeutsche Zeitung","Th¨¹ringer Allgemeine|TH¨¹RINGER ALLGEMEINE","Ostth¨¹ringer Zeitung")
 #create subset
 arts_keep <- vector()
@@ -181,7 +182,6 @@ newspapers <- newspapers[-trash,]
 
 #replace "nachhaltigelandwirtschaft" by "nachhaltige landwirtschaft"
 newspapers$text <- gsub("nachhaltigeLandwirtschaft|NachhaltigeLandwirtschaft","nachhaltige landwirtschaft",newspapers$text)
-
 
 #write out
 save(newspapers_cleaner,file="data_for_analysis/newspapers_clean.RData")
