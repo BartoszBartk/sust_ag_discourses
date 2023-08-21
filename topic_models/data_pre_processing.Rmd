@@ -1,0 +1,135 @@
+---
+title: "Data Pre-Processing"
+author: "Jan Sodoge"
+date: '2022-10-14'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidytext)
+library(tidyverse)
+library(readr)
+```
+
+# Newspaper
+
+
+
+```{r}
+clean_corpus_28_7_2022 <- read_csv("analysis/data/clean_corpus_28_7_2022.csv")
+
+
+stopwords_mariana <- read.csv("analysis/data/stopwords_2.csv.txt")
+
+
+cleaned <- clean_corpus_28_7_2022 %>% 
+   mutate(text_edit = str_replace_all(text_edit, "\n", " ")) %>% 
+  mutate(text_edit = str_replace_all(text_edit, "[[:digit:]]+", " ")) %>% 
+  mutate(text_edit = str_replace_all(text_edit, "[^[\\da-zA-Zäüöß ]]", " ")) %>% 
+  mutate(text_edit = tolower(text_edit)) %>% 
+  unnest_tokens(word, text_edit) %>% 
+  dplyr::anti_join(tidytext::get_stopwords(language = "de")) %>% 
+  dplyr::filter(nchar(word) > 3) %>% 
+  dplyr::anti_join(stopwords_mariana, by = c("word" = "archivfoto")) %>% 
+  group_by(doc_id) %>% 
+    summarize(text = str_c(word, collapse = " ")) %>%
+    ungroup()
+
+
+write.csv(cleaned, "analysis/data/clean_corpus_14_10_2022.csv")
+
+```
+
+
+
+```{r}
+newspaper_data <- read_csv("data/raw_corpora/newspaper_data.csv")
+
+clean_corpus_14_10_2022 <- read_csv("data/clean_corpus_14_10_2022.csv")
+
+
+newspaper_data_filtered <- newspaper_data %>% 
+  dplyr::semi_join(clean_corpus_14_10_2022, by =c("doc_id" = "doc_id"))
+
+```
+
+
+
+
+# Research abstracts
+
+```{r}
+
+library(tidytext)
+library(readr)
+library(readxl)
+
+journals_data <- read_csv("journals_data_new_28_03.csv.xls") %>% 
+  dplyr::filter(abstract != "[No abstract available]")
+
+journals_data <- journals_data %>% 
+  unnest_tokens(word, abstract) %>% 
+  dplyr::anti_join(tidytext::get_stopwords()) %>% 
+  group_by(doi) %>% 
+    summarize(text = str_c(word, collapse = " ")) %>%
+    ungroup()
+
+
+write.csv(journals_data, "analysis/data/journals_data_clean.csv")
+
+```
+
+
+
+# Agriculture journals german
+
+```{r}
+library(readr)
+ag_magazines_data <- read_csv("analysis/data/ag_magazines_data - Kopie.csv") %>% 
+    dplyr::select(Main, ID)
+
+
+ag_magazines_data <- ag_magazines_data %>% 
+  dplyr::filter(!str_detect(ID, "Agrarheute"))
+
+
+ag_magazines_data_b <- ag_magazines_data %>% 
+  dplyr::filter(str_detect(ID, "Agrarheute")) %>% 
+  mutate(Main  = str_replace_all(Main, "Ã¶", "ö")) %>% 
+  mutate(Main  = str_replace_all(Main, "Ã¼", "ü")) %>% 
+  mutate(Main  = str_replace_all(Main, "Ã¤¶", "ä")) %>% 
+  mutate(Main  = str_replace_all(Main, "Ãœ", "Ü")) %>% 
+  mutate(Main  = str_replace_all(Main, "Ã¶", "ö")) %>% 
+  mutate(Main  = str_replace_all(Main, "Ã¶", "ö")) %>% 
+  mutate(Main  = str_replace_all(Main, "Ã¶", "ö")) %>% 
+
+
+
+
+
+
+
+
+cleaned <- ag_magazines_data %>% 
+   mutate(text_edit = str_replace_all(Main, "\n", " ")) %>% 
+  mutate(text_edit = str_replace_all(text_edit, "[[:digit:]]+", " ")) %>% 
+  mutate(text_edit = str_replace_all(text_edit, "[^[\\da-zA-ZäöüÄÖÜß ]]", "")) %>% 
+  mutate(text_edit = tolower(text_edit)) %>% 
+  unnest_tokens(word, text_edit) %>% 
+  dplyr::anti_join(tidytext::get_stopwords(language = "de")) %>% 
+  dplyr::filter(nchar(word) > 3) %>% 
+  dplyr::anti_join(stopwords_mariana, by = c("word" = "archivfoto"))
+
+clean_compose <- cleaned %>% 
+    group_by(ID) %>% 
+    summarize(text = paste(word, collapse = " ")) %>%
+    ungroup()
+
+
+write.csv(clean_compose, "analysis/data/cleand_agri_journals_7_11.csv")
+
+
+```
+
+

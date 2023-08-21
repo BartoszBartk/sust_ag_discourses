@@ -1,0 +1,238 @@
+---
+title: "Creating result output"
+format: html
+editor: visual
+---
+
+This code transforms the output of the bert topic models to associate documents and topics
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+library(tidyverse)
+
+
+
+scientific_articles <- readxl::read_xlsx("final_topic_data_may/journals_labels_may_final_updated_format.xlsx") %>% 
+  dplyr::select(Topic, Label, Relevance) %>%
+  dplyr::rename(Relevant = Relevance) %>% 
+  mutate(corpus = "scientific_articles",
+         Relevant = as.character(Relevant))
+
+newspaper_articles <- readxl::read_xlsx("final_topic_data_may/newspaper_labels_may_final_updated_format.xlsx") %>% 
+  dplyr::select(Topic, Label, Relevance)%>% 
+  dplyr::rename(Relevant = Relevance) %>% 
+  mutate(corpus = "newspaper",
+         Relevant = as.character(Relevant))
+
+
+ag_magazine_articles_b <- readxl::read_xlsx("final_topic_data_may/ag_magazines_labels_may_finall_updated_format.xlsx") %>% 
+  dplyr::select(Topic, Label, Relevance) %>% 
+  dplyr::rename(Relevant = Relevance) %>% 
+  mutate(corpus = "ag_magazines",
+         Relevant = as.character(Relevant))
+
+
+all_labels <- dplyr::bind_rows(ag_magazine_articles,
+                               newspaper_articles,
+                               scientific_articles) %>% 
+  dplyr::mutate(Relevant = ifelse(Relevant == "TRUE", "YES", Relevant)) %>% 
+  dplyr::filter(!is.na(Relevant)) %>% 
+  dplyr::filter(Relevant == "YES")
+
+
+
+
+
+
+```
+
+Newspaper topic predictions
+
+```{r}
+docs_topics_newspaper <- read_csv("~/GitHub/agridiscourse/analysis/docs_topics_newspaper_12_03_23.csv")
+View(docs_topics_newspaper_12_03_23)
+docs <- read_csv("~/GitHub/agridiscourse/analysis/data/clean_corpus_14_10_2022.csv") 
+og_corpus <- read_csv("~/GitHub/agridiscourse/analysis/data/clean_corpus_28_7_2022.csv")
+
+
+
+newspaper_topics <- docs %>% 
+  dplyr::bind_cols(docs_topics_newspaper) %>% 
+  dplyr::select(`0`, ...4, text,doc_id) %>% 
+  dplyr::rename(prob = ...4, 
+                topic  = `0`)%>% 
+  mutate(corpus = "newspaper") %>% 
+  dplyr::left_join(og_corpus, by = c("doc_id" = "doc_id")) %>% 
+  dplyr::select(topic, prob, text.x, text.y, year, doc_id, corpus) %>% 
+  dplyr::rename(cleaned_text = text.x, 
+                original_text = text.y)
+
+
+
+
+
+
+
+
+```
+
+Agriculture-sector journals
+
+```{r}
+docs_topics_agriculture_journals <- read_csv("~/GitHub/agridiscourse/analysis/docs_topics_agriculture_journals_12_03_23.csv")
+
+docs <- read_csv("~/GitHub/agridiscourse/analysis/data/cleand_agri_journals_7_11.csv")
+
+og_corpus <- read_csv("~/GitHub/agridiscourse/analysis/data/ag_magazines_data - Kopie.csv")
+
+
+
+agriculture_topics <- docs %>% 
+  dplyr::bind_cols(docs_topics_agriculture_journals) %>% 
+  dplyr::select(`0`, ...4, text,ID) %>% 
+  dplyr::rename(prob = ...4, 
+                topic  = `0`,
+                doc_id = ID) %>% 
+  mutate(corpus = "ag_magazines") %>% 
+  dplyr::left_join(og_corpus, by = c("doc_id" = "ID")) %>% 
+  dplyr::select(topic, prob, text, doc_id, Date, Main, corpus) %>% 
+  dplyr::rename(original_text = Main,
+                cleaned_text = text)
+
+
+
+
+agriculture_topics %>% 
+  group_by(topic) %>% 
+  count()
+```
+
+Academic journals - abstracts
+
+```{r}
+docs_topics_abstracts <- read_csv("~/GitHub/agridiscourse/analysis/docs_topics_abstracts_12_03_23.csv")
+docs <- read_csv("~/GitHub/agridiscourse/analysis/data/journals_data_clean.csv")
+og_corpus <- read_csv("~/GitHub/agridiscourse/analysis/data/journals_data.csv")
+
+
+abstracts_topics <- docs %>% 
+  dplyr::bind_cols(docs_topics_abstracts) %>% 
+  dplyr::select(`0`, ...4, text,doi) %>% 
+  dplyr::rename(prob = ...4, 
+                topic  = `0`,
+                doc_id = doi) %>% 
+  mutate(corpus = "scientific_articles") %>% 
+  dplyr::left_join(og_corpus, by = c("doc_id" = "doi")) %>% 
+  dplyr::select(topic, prob, text, doc_id, year, abstract) %>% 
+  dplyr::rename(original_text = abstract,
+                cleaned_text = text)
+
+
+abstracts_topics %>% 
+  group_by(topic) %>% 
+  count()
+
+```
+
+--\> Create the example topics for bartosz
+
+```{r}
+example_text_abstracts <- abstracts_topics %>% 
+  dplyr::left_join(all_labels %>% dplyr::filter(corpus == "scientific_articles"),
+                   by = c("topic" ="Topic")) %>% 
+  drop_na(Label) %>% 
+  arrange(topic) %>% 
+  group_by(topic) %>%
+  arrange(desc(prob)) %>% 
+  slice_head(n = 2) %>% 
+  dplyr::select(Label, original_text) 
+
+
+
+
+example_text_agriculture_mags <- agriculture_topics %>% 
+  dplyr::left_join(all_labels %>% dplyr::filter(corpus == "ag_magazines"),
+                   by = c("topic" ="Topic")) %>% 
+  drop_na(Label) %>% 
+  arrange(topic) %>% 
+  group_by(topic) %>%
+  arrange(desc(prob)) %>% 
+  slice_head(n = 2) %>% 
+  dplyr::select(Label, original_text)
+
+
+
+example_text_newspaper <- newspaper_topics %>% 
+  dplyr::left_join(all_labels %>% dplyr::filter(corpus == "newspaper"),
+                   by = c("topic" ="Topic")) %>% 
+  drop_na(Label) %>% 
+  arrange(topic) %>% 
+  group_by(topic) %>%
+  arrange(desc(prob)) %>% 
+  slice_head(n = 2) %>% 
+  dplyr::select(Label, original_text) 
+
+
+
+save(example_text_newspaper,
+     example_text_agriculture_mags,
+     example_text_abstracts,
+     file = "example_texts.RData")
+
+
+```
+
+Dataset for analysis
+
+```{r}
+a <-  abstracts_topics %>% 
+  dplyr::left_join(all_labels %>% dplyr::filter(corpus == "scientific_articles"),
+                   by = c("topic" ="Topic")) %>% 
+  drop_na(Label) %>% 
+  dplyr::select(Label, Relevant, corpus, doc_id, year)%>% 
+  dplyr::mutate(doc_id  = as.character(doc_id))
+
+
+b <- newspaper_topics %>% 
+  dplyr::left_join(all_labels %>% dplyr::filter(corpus == "newspaper"),
+                   by = c("topic" ="Topic")) %>% 
+  drop_na(Label) %>% 
+  dplyr::select(Label, Relevant, corpus.x, doc_id, year) %>% 
+   dplyr::rename(corpus = corpus.x)%>% 
+  dplyr::mutate(doc_id  = as.character(doc_id))
+ 
+ 
+c <-  agriculture_topics %>% 
+  dplyr::left_join(all_labels %>% dplyr::filter(corpus == "ag_magazines"),
+                   by = c("topic" ="Topic")) %>% 
+  drop_na(Label) %>% 
+  mutate(date = lubridate::dmy(Date)) %>% 
+    mutate(year = lubridate::year(date)) %>% 
+
+  dplyr::select(Label, Relevant, corpus.x, doc_id, year, Date) %>% 
+   dplyr::rename(corpus = corpus.x) %>% 
+  dplyr::mutate(doc_id  = as.character(doc_id))
+ 
+ 
+#write.csv(c, "agricultre_journals_edit_date.csv")
+
+
+c <- read_delim("agricultre_journals_edit_date.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+   dplyr::select(Label, Relevant, corpus, doc_id, year) %>% 
+  dplyr::mutate(doc_id  = as.character(doc_id))
+ 
+
+ 
+```
+
+```{r}
+topics_time_corpus <- dplyr::bind_rows(a,b,c) %>% 
+  dplyr::filter(Relevant == "YES") %>% 
+  group_by(Label, corpus, year) %>% 
+  count()
+
+write.csv(topics_time_corpus, file = "labels_docs_overview_17_04_2023.csv")
+
+
+```
